@@ -303,54 +303,60 @@ public class Submission {
 								}
 							}	// end - while
 							
-							// next line should be start of answer (possibly complete on one line)
-							//   unless no answer present, then make answerQueryStr blank
-							if (line != null && !Utilities.isInstructorComment(line)) {
-								answerQueryStr = line;
-							} else if (Utilities.isInstructorComment(line)) {	// if found next question - no answer submitted
-								answerQueryStr = "";
-							} else {											//  if line is null
-								answerQueryStr = "";
-							}
-							//System.out.println("start of answerQueryStr is: >" + answerQueryStr + "<");
-											
-							// process the remaining lines for that answer to get the complete query
-							if (line != null && !Utilities.isInstructorComment(line)) {
-								moreLinesForAnswer = true;
-							} else {
-								moreLinesForAnswer = false;
-							}
-							while (line != null && moreLinesForAnswer) {
-								line = br.readLine();					// get next line
-								if (line != null) {						// if not at end of file...
-							        matcher = pattern.matcher(line);
-							        // TODO - need to generally check for . or )
-							        // TODO - need better new question check than period at less than hard-coded position
-							        if (matcher.find() && line.indexOf('.') < 8) {	// if find start of next question
-							        	//System.out.println("found start of next question");
-							        	moreLinesForAnswer = false;
-							        }
-							        else if (line.indexOf(';') == -1) {	// look for terminating semicolon,						
-							        	//System.out.println("found additional answer line");
-							        	answerQueryStr += ("\n" + line); //  if not found, still part of answer
-							        }
-							        else if (line.indexOf(';') != -1) { // found semicolon, is end of answer 
-							        	//System.out.println("found last question line, with semicolon");
-							        	answerQueryStr += ("\n" + line);
-							        	moreLinesForAnswer = false;
-										line = br.readLine();			// start toward next question
-							        }
-							        else if (Utilities.isUserCommentSingleLine(line) ||
-							        		 Utilities.isUserCommentMultiLineStart(line)) { 		// found user comment embedded in answer
-							        	line = Utilities.processUserComments(br, line, commWriter, submissionFileName);
-							        }
-							        else {
-							        	System.err.println("unexpected answer line condition");
-							        }
-							        //System.out.println("next line is: >" + line + "<");
-								}	// end - if line is not null
-							}	// end - while more lines for answer
-							//System.out.println("final answer before blank/comment check for " + qNumStr + " is: >" + answerQueryStr.trim() + "<\n");
+							
+								//Get the complete SQL query written by student and return the answer query string
+	private String getAnswerQuery(String line, String answerQueryStr, BufferedReader br,PrintWriter commWriter)
+	{
+		//start of answer (possibly complete on one line) unless no answer present, then make answerQueryStr blank
+		if (line != null && !Utilities.isInstructorComment(line)) {
+			answerQueryStr = line;
+		}else if (Utilities.isInstructorComment(line)) {	// if found next question - no answer submitted
+			answerQueryStr = "";
+			return answerQueryStr;
+		}else {
+			answerQueryStr = "";
+		} 
+		//System.out.println("start of answerQueryStr is: >" + answerQueryStr + "<");
+		
+		// process the remaining lines for that answer to get the complete query
+		try {
+			while((line = br.readLine())!= null) {
+				
+			    // if not at end of file...
+			    if (Utilities.isQuestionFound(line)) {	// if find start of next question
+			    	//System.out.println("found start of next question");
+			    	br.reset();
+			    	break;
+			    }
+			    else if (line.indexOf(';') == -1) {	// look for terminating semicolon,						
+			    	//System.out.println("found additional answer line");
+			    	answerQueryStr += ("\n" + line); //  if not found, still part of answer
+			    	br.mark(0);
+			    }
+			    else if (line.indexOf(';') != -1) { // found semicolon, is end of answer 
+			    	//System.out.println("found last question line, with semicolon");
+			    	answerQueryStr += ("\n" + line);
+			    	break;
+			    }
+			    else if (Utilities.isUserCommentSingleLine(line) ||
+			    		 Utilities.isUserCommentMultiLineStart(line)) { 		// found user comment embedded in answer
+			    	line = Utilities.processUserComments(br, line, commWriter, submissionFileName);
+			    }
+			    else {
+			    	System.err.println("unexpected answer line condition");
+			    }
+			    //System.out.println("next line is: >" + line + "<");
+			}// end - while more lines for answer
+		} catch (FileNotFoundException e) {
+			System.err.println("Cannot find file " + submissionFileName);
+		} catch (IOException ioe) {
+			System.err.println("Cannot read from file " + submissionFileName);
+		}
+		//System.out.println("final answer before blank/comment check for Question is " + answerQueryStr.trim() + "<\n");
+		return answerQueryStr;
+	}
+	
+							
 							
 							// process any remaining lines, looking for user comments, possibly surrounded by blank lines
 							line = Utilities.skipBlankLines(br, line);
